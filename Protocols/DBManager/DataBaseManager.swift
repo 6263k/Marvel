@@ -8,9 +8,9 @@
 import Foundation
 import RealmSwift
 
-protocol DataBase {
+protocol DataBaseManager {
 	var realm: Realm { get }
 	var configuration: Realm.Configuration { get }
 	
-	init?(config: Realm.Configuration)
+	init(config: Realm.Configuration)
 }

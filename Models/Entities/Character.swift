@@ -42,7 +42,7 @@ class CharacterModel: Object, Decodable {
 	override class func primaryKey() -> String? {
 		return "id"
 	}
-	
+
 }
 
 struct CharacterDataWrapper: Decodable {

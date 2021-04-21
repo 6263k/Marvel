@@ -8,22 +8,23 @@
 import RealmSwift
 import RxSwift
 
-final class DBManager: DataBase {
+final class DBManager: DataBaseManager {
 	let realm: Realm
 	let configuration: Realm.Configuration
 	
-	init?(config: Realm.Configuration){
-		self.configuration = config
+	init(config: Realm.Configuration)  {
+		configuration = config
 		
 		do {
-			self.realm = try Realm(configuration: config)
+			realm = try Realm(configuration: config)
 		} catch let error as NSError {
-			print("Realm unresolved error has occured\(error.localizedDescription)")
-			return nil
+			print("Unresolved error has occured when opening Realm: \(error.localizedDescription)")
+			fatalError()
 		}
+
 	}
 	
-	convenience init?() {
+	convenience init() {
 		var defaultConfiguration: Realm.Configuration {
 			let documentsUrl = try! FileManager.default
 				.url(for: .documentDirectory, in: .userDomainMask,
@@ -32,6 +33,7 @@ final class DBManager: DataBase {
 			let objectTypes = [CharacterModel.self]
 			return Realm.Configuration.init(fileURL: documentsUrl, schemaVersion: 1, migrationBlock: {_,_ in }, deleteRealmIfMigrationNeeded: false, objectTypes: objectTypes)
 		}
+		
 		self.init(config: defaultConfiguration)
 	}
 	
@@ -49,7 +51,7 @@ final class DBManager: DataBase {
 }
 
 
-private extension Realm {
+fileprivate extension Realm {
 	func safeWrite(_ block: () -> Void) {
 		do {
 			if !isInWriteTransaction {

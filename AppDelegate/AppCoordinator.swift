@@ -6,10 +6,12 @@
 //
 
 import UIKit
+import Swinject
 
 final class AppCoordinator: Coordinator {
 	enum Route {}
 	private let window: UIWindow?
+	private let container: Container
 	
 	private let rootNavigationController: UINavigationController = {
 		let nc = UINavigationController()
@@ -21,8 +23,9 @@ final class AppCoordinator: Coordinator {
 	
 	private var childCoordinators = [Coordinatable]()
 	
-	init(with window: UIWindow?) {
+	init(with window: UIWindow?, container: Container) {
 		self.window = window
+		self.container = container
 	}
 	
 	func start() {
