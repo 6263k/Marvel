@@ -16,7 +16,11 @@ class CharacterModel: Object, Decodable {
 	@objc dynamic private var _imageURL: String = ""
 	
 	var imageURL: URL? {
-		get { URL(string: _imageURL) }
+		get {
+			var components = URLComponents(string: _imageURL)
+			components?.scheme = "https"
+			return components?.url
+		}
 		set { _imageURL = newValue?.absoluteString ?? ""}
 	}
 	
@@ -42,15 +46,19 @@ class CharacterModel: Object, Decodable {
 	override class func primaryKey() -> String? {
 		return "id"
 	}
+	
+	override static func indexedProperties() -> [String] {
+		return ["name"]
+	}
 
 }
 
 struct CharacterDataWrapper: Decodable {
-	let code: String
+	let code: Int
 	let status: String
 	let data: CharacterContainer
-	
-	struct CharacterContainer: Decodable {
-		let results: [CharacterModel]
-	}
+}
+
+struct CharacterContainer: Decodable {
+	let results: [CharacterModel]
 }

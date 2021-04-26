@@ -9,6 +9,7 @@ import RealmSwift
 import RxSwift
 
 final class DBManager: DataBaseManager {
+	
 	let realm: Realm
 	let configuration: Realm.Configuration
 	
@@ -38,8 +39,16 @@ final class DBManager: DataBaseManager {
 	}
 	
 	
-	func getOjbectsWithIDs<Element: Object>(ofType type: Element.Type, IDs: [Int]) -> Observable<[Element]> {
-		return Observable.of(Array(realm.objects(type).filter("id IN %d", IDs)))
+	func getOjbectWith<Element: Object>(ID: Int, ofType type: Element.Type) -> Observable<Element> {
+		guard let object = realm.object(ofType: type, forPrimaryKey: ID) else { return .empty()}
+		return Observable.just(object)
+	}
+	
+	func getObjectsWhere<Element: Object>(nameStartsWith: String, ofType type: Element.Type) -> Observable<[Element]> {
+		return Observable.just(
+			Array(realm.objects(type).filter("name BEGINSWITH %d", nameStartsWith)
+							.sorted(byKeyPath: "name", ascending: true))
+		)
 	}
 	
 	func saveObjects<Element: Object>(objects: [Element]) {

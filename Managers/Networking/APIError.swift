@@ -19,9 +19,12 @@ enum APIError: Error {
 		switch error {
 			case .jsonMapping(_):
 				return .jsonConversationFailed
-			case .underlying(let error, _):
-				if error._code == NSURLErrorTimedOut { return .requestTimedOut }
+			case .underlying(let error , _):
+				let error = error.asAFError?.underlyingError as NSError? //MoyaError returns wrong error code so i have to cast it like this
+				if error?.code == NSURLErrorTimedOut { return .requestTimedOut }
 				return .moyaError
+			case .statusCode(_):
+				return .requestFailed
 			default:
 				return .moyaError
 		}
@@ -42,7 +45,7 @@ extension APIError {
 			case .requestTimedOut:
 				return "Время ожидания отправки запроса истекло"
 			case .moyaError:
-				return "Какая-то ошибка из Мои, я не распарсил их ¯\\_(ツ)_/¯"
+				return "Какая-то ошибка, я не до конца распарсил их ¯\\_(ツ)_/¯"
 		}
 	}
 }

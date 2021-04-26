@@ -38,8 +38,8 @@ extension MultiMoyaProvider {
 				switch result {
 					case .success(let response):
 						observable(.success(.success(response.data)))
-					case .failure:
-						observable(.success(.failure(.requestFailed)))
+					case .failure(let error):
+						observable(.success(.failure(APIError.from(error))))
 				}
 			}
 			return Disposables.create {

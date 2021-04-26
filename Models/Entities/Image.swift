@@ -12,11 +12,18 @@ struct Image: Decodable {
 	let imageExtension: String
 	
 	var imageFullPath: String {
-		return path + imageExtension
+		return path + "." + imageExtension
 	}
 	
 	enum ImageCodingKeys: String, CodingKey {
 		case path
 		case imageExtension = "extension"
 	}
+	
+	init(from decoder: Decoder) throws {
+		let container = try decoder.container(keyedBy: ImageCodingKeys.self)
+		path = try container.decode(String.self, forKey: .path)
+		imageExtension = try container.decode(String.self, forKey: .imageExtension)
+	}
+	
 }

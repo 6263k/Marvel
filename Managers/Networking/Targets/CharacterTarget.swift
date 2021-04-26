@@ -9,7 +9,7 @@ import Moya
 
 
 enum CharacterTarget {
-	case characters(offset: Int, name: String = "")
+	case characters(offset: Int, nameStartsWith: String = "", limit: Int = 20)
 	case characterWith(id: Int)
 }
 
@@ -40,13 +40,12 @@ extension CharacterTarget: TargetType {
 	}
 	
 	var parameters: [String: Any] {
-		var params = [String: Any]()
-		params["apikey"] = ProcessInfo.processInfo.environment["public_apiKey"]
-		
+		var params = [String: Any]()		
 		switch self {
-			case .characters(let offset, let name):
+			case .characters(let offset, let name, let limit):
 				params["offset"] = offset
-				params["nameStartsWith"] = name
+				params["limit"] = limit
+				if !name.isEmpty { params["nameStartsWith"] = name }
 				params["orderBy"] = "name"
 			case .characterWith:
 				break

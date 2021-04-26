@@ -7,8 +7,11 @@
 
 
 import Moya
+import RxSwift
 
 protocol NetworkManager {
 	var provider: MultiMoyaProvider { get }
 	var session: Session { get }
+	
+	func request(_ target: TargetType) -> Single<Result<Data, APIError>>
 }
