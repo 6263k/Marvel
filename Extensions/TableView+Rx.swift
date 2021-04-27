@@ -13,7 +13,7 @@ extension Reactive where Base: UITableView {
 		return Observable.from([
 			NotificationCenter.default.rx.notification(UIResponder.keyboardWillShowNotification)
 				.map { notification -> CGFloat in
-					(notification.userInfo?[UIResponder.keyboardFrameBeginUserInfoKey] as? NSValue)?.cgRectValue.height ?? 0 
+					(notification.userInfo?[UIResponder.keyboardFrameBeginUserInfoKey] as? NSValue)?.cgRectValue.height ?? 0 + 12
 				},
 			NotificationCenter.default.rx.notification(UIResponder.keyboardWillHideNotification)
 				.map {_ -> CGFloat in
@@ -23,4 +23,10 @@ extension Reactive where Base: UITableView {
 		.merge()
 	}
 	
+}
+
+extension UIScrollView {
+	func isNearBottomEdge(edgeOffset: CGFloat = 20.0) -> Bool {
+		self.contentOffset.y + self.frame.size.height + edgeOffset > self.contentSize.height
+	}
 }

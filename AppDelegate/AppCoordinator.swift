@@ -18,8 +18,7 @@ final class AppCoordinator: Coordinator {
 		nc.navigationBar.isHidden = true
 		nc.modalPresentationStyle = .fullScreen
 		nc.modalTransitionStyle = .crossDissolve
-		nc.view.backgroundColor = .red
-//		nc.view.backgroundColor = .clear
+		nc.view.backgroundColor = .clear
 		return nc
 	}()
 	
@@ -36,7 +35,7 @@ final class AppCoordinator: Coordinator {
 		
 		let characterCoordinator = CharacterCoordinator(rootNavigationController, container)
 		characterCoordinator.start()
-		
+		childCoordinators.append(characterCoordinator)
 	}
 	
 	func route(to route: Route, from: UIViewController?, with transition: Transition) {}

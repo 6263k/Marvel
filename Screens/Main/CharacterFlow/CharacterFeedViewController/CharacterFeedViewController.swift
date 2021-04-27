@@ -70,7 +70,7 @@ final class CharacterFeedViewController: BaseViewController<CharacterFeedViewMod
 		tableView.rx.keyboardHeight
 			.asDriver(onErrorJustReturn: 0)
 			.drive(onNext: { [weak self] offset in
-				let offset = offset + 12
+				let offset = offset
 				self?.tableView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: offset, right: 0)
 				if self?.tableView.isNearBottomEdge() ?? false {
 					self?.tableView.contentOffset.y += offset

@@ -18,7 +18,7 @@ class CharacterModel: Object, Decodable {
 	var imageURL: URL? {
 		get {
 			var components = URLComponents(string: _imageURL)
-			components?.scheme = "https"
+			components?.scheme = "https" // API gives me images with http scheme which is not allowed by swift security protocols
 			return components?.url
 		}
 		set { _imageURL = newValue?.absoluteString ?? ""}

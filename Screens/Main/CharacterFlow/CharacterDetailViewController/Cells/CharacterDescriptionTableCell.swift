@@ -11,14 +11,6 @@ class CharacterDescriptionTableCell: BaseTableViewCell {
 
 	@IBOutlet private weak var descriptionLabel: UILabel!
 	
-	override func awakeFromNib() {
-		super.awakeFromNib()
-	}
-	
-	override func setSelected(_ selected: Bool, animated: Bool) {
-		super.setSelected(selected, animated: animated)
-	}
-    
 	override func configure(with cellModel: BaseCellModel) {
 		super.configure(with: cellModel)
 		guard let descCellModel = cellModel as? CharacterDescriptionTableCellModel else { return }
