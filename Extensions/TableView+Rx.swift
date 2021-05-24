@@ -23,6 +23,13 @@ extension Reactive where Base: UITableView {
 		.merge()
 	}
 	
+	func isNearBottomEdge(edgeOffset: CGFloat = 20.0) -> Observable<Bool> {
+		return Observable.create { observer in
+			observer.onNext(base.isNearBottomEdge(edgeOffset: edgeOffset))
+			return Disposables.create()
+		}
+	}
+	
 }
 
 extension UIScrollView {

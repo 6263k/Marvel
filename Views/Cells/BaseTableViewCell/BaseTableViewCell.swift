@@ -5,9 +5,9 @@
 //  Created by Даниил on 23.04.2021.
 //
 
-import UIKit
+import ReactorKit
 
-class BaseTableViewCell: UITableViewCell {
+class BaseTableViewCell: UITableViewCell{
 	
 	override func awakeFromNib() {
 		super.awakeFromNib()
@@ -16,6 +16,8 @@ class BaseTableViewCell: UITableViewCell {
 	
 	func configure(with cellModel: BaseCellModel){
 	}
+	
+	
 }
 
 extension BaseTableViewCell {

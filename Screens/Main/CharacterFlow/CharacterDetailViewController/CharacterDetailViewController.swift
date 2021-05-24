@@ -11,17 +11,15 @@ class CharacterDetailViewController: BaseViewController<CharacterDetailViewModel
 
 	@IBOutlet private weak var tableView: UITableView!
 	
-	private let disposeBag = DisposeBag()
-	
 	override func setupStyle() {
 		navigationItem.title = "Character detail"
 		tableView.rowHeight = UITableView.automaticDimension
 		tableView.estimatedRowHeight = 300
 	}
 	
-	override func setupRx() {
-		
-		viewModel.cellModels
+	override func bind(reactor: CharacterDetailViewModel) {
+		//State
+		reactor.state.map { $0.cellModels }
 			.bind(to: tableView.rx.items) {tableView, index, cellModel in
 				let nib = UINib(nibName: cellModel.cellIdentifier, bundle: .main)
 				tableView.register(nib, forCellReuseIdentifier: cellModel.cellIdentifier)
@@ -32,6 +30,9 @@ class CharacterDetailViewController: BaseViewController<CharacterDetailViewModel
 				return cell
 			}
 			.disposed(by: disposeBag)
+		
+		//Actions
+		reactor.action.onNext(.didLoad)
 		
 	}
 	

@@ -5,36 +5,53 @@
 //  Created by Даниил on 25.04.2021.
 //
 
-import RxSwift
+import ReactorKit
 
-final class CharacterDetailViewModel: BaseViewModel {
-	
-	private let characterId: Int
+final class CharacterDetailViewModel: BaseViewModel, Reactor {
 	private let service: MarvelService
-	private let coordinator: CharacterCoordinator
 	
-	private var character: CharacterModel!
+	enum Action {
+		case didLoad
+	}
+	
+	enum Mutation {
+		case updateCellModels
+	}
+	
+	struct State {
+		var cellModels = [BaseCellModel]()
+	}
+	
+	let initialState: State
 	private let disposeBag = DisposeBag()
+	private let character: CharacterModel
 	
-	let cellModels = BehaviorSubject<[BaseCellModel]>(value: [])
 	
-	init(with characterId: Int, service: MarvelService, coordinator: CharacterCoordinator ) {
-		self.characterId = characterId
-		self.service = service
-		self.coordinator = coordinator
+	init(with character: CharacterModel, service: MarvelService) {
+		self.service = service		
+		self.character = character
+
+		initialState = State()
 		super.init()
 	}
 	
-	override func setupModel() {
-		service.fetchCharacterBy(id: characterId)
-			.subscribe(onNext: { [weak self] character in
-				self?.character = character
-				self?.createCellModels()
-			})
-			.disposed(by: disposeBag)
+	func mutate(action: Action) -> Observable<Mutation> {
+		switch action {
+			case .didLoad:
+				return Observable.just(.updateCellModels)
+		}
 	}
 	
-	private func createCellModels() {
+	func reduce(state: State, mutation: Mutation) -> State {
+		var newState = state
+		switch mutation {
+			case .updateCellModels:
+				newState.cellModels = createCellModels(state: newState)
+		}
+		return newState
+	}
+	
+	private func createCellModels(state: State) -> [BaseCellModel] {
 		var cellModels = [BaseCellModel]()
 		
 		let characterCellModel = CharacterCellModel(with: character)
@@ -43,7 +60,7 @@ final class CharacterDetailViewModel: BaseViewModel {
 		let characterDescCellModel = CharacterDescriptionTableCellModel(character: character)
 		cellModels.append(characterDescCellModel)
 		
-		self.cellModels.onNext(cellModels)
+		return cellModels
 	}
 	
 }

@@ -6,115 +6,164 @@
 //
 
 
-import RxSwift
+import ReactorKit
 import RxCocoa
 
 typealias VoidBlock = () -> Void
 
-final class CharacterFeedViewModel: BaseViewModel {
+final class CharacterFeedViewModel: BaseViewModel, Reactor {
+	
+	enum Action {
+		case searchTextChanged(searchText: String)
+		case isMoreDataNeeded
+		
+		//Navigation
+		case routeToCharacter(character: CharacterModel)
+		case showErrorNetwork(error: APIError)
+	}
+	
+	enum Mutation {
+		case moreFilteredCharacters(Result<[CharacterModel], APIError>)
+		case filteredCharacters(Result<[CharacterModel], APIError >)
+		
+		case setIsLoadingInitialData(Bool)
+		case setIsLoadingMoreData(Bool)
+		
+		case updateCellModels
+		case updateCurrentOffset(value: Int)
+		case setEndReached(Bool)
+		
+	}
+	
+	struct State {
+		var cellModels: [BaseCellModel] = []
+		var filteredCharacters: [CharacterModel] = []
+		var isLoadingInitialData: Bool = false
+		var endReached: Bool = false
+		var isLoadingMoreData: Bool = false
+		var currentOffset = 0
+		var searchTextValue: String = ""
+	}
+	
 	private let service: MarvelService
-	private let coordinator: CharacterCoordinator
-	
-	private let dissposeBag = DisposeBag()
 	private let itemsPerPage = 10
-	private var currentOffset = 0
-	private var filteredCharacters = [CharacterModel]()
+	private let dissposeBag = DisposeBag()
 	
-	let cellModels = BehaviorSubject<[BaseCellModel]>(value: [])
-	let searchText = BehaviorRelay<String>(value: "")
-	let isLoadingInitialData = BehaviorRelay<Bool>(value: false)
-	let shouldLoadMoreData = BehaviorRelay<Bool>(value: false)
+	let initialState: State
 	
-	private let isLoadingMoreData = BehaviorRelay<Bool>(value: false)
-	private var endReached = false
-	
-	init(service: MarvelService, coordinator: CharacterCoordinator) {
+	init(service: MarvelService) {
 		self.service = service
-		self.coordinator = coordinator
+		initialState = State()
 		super.init()
 	}
 	
-	override func setupModel() {
-
-		searchText
-			.throttle(.milliseconds(500), scheduler: MainScheduler.instance)
-			.distinctUntilChanged()
-			.flatMap { [weak self] query -> Observable<Result<[CharacterModel], APIError>> in
-				guard let self = self,
-							query.count >= 3 else { return .just(.success([])) }
-				self.currentOffset = 0
-				self.endReached = false
-				self.isLoadingInitialData.accept(true)
-				return self.service.requestCharacters(offset: self.currentOffset, nameStartsWith: query, limit: self.itemsPerPage)
-			}
-			.subscribe(onNext: { [weak self] result in
-				self?.isLoadingInitialData.accept(false)
-				switch result {
-					case .failure(let error):
-						self?.coordinator.showError(error: error)
-					case .success(let characters):
-						self?.filteredCharacters = characters
-						self?.createModels()
+	func mutate(action: Action) -> Observable<Mutation> {
+		switch action {
+			case .routeToCharacter, .showErrorNetwork:
+				return Observable.empty()
+				
+			case .isMoreDataNeeded:
+				guard !currentState.isLoadingMoreData && !currentState.isLoadingInitialData && !currentState.filteredCharacters.isEmpty && !currentState.endReached else { return Observable.empty() }
+				
+				return Observable.concat([
+					Observable.just(.setIsLoadingMoreData(true)),
+					
+					Observable.just(.updateCellModels),
+					
+					service.requestCharacters(offset: currentState.currentOffset, nameStartsWith: currentState.searchTextValue, limit: itemsPerPage, ignoreDB: true)
+						.map { Mutation.moreFilteredCharacters($0)},
+					
+					Observable.just(.setIsLoadingMoreData(false)),
+					
+					Observable.just(.updateCellModels)
+				])
+				
+			case .searchTextChanged(let searchText):
+				guard searchText.count >= 3 else {
+					return Observable.concat([
+						Observable.just(.filteredCharacters(.success([]))),
+						Observable.just(.updateCellModels)
+					])
 				}
-			})
-			.disposed(by: dissposeBag)
-		
-		shouldLoadMoreData
-			.filter { [weak self] _ in
-				guard let self = self else { return false }
-				return !self.isLoadingInitialData.value && !self.isLoadingMoreData.value && !self.filteredCharacters.isEmpty && !self.endReached
-			}
-			.filter { $0 }
-			.flatMap { [weak self] _ -> Observable<Result<[CharacterModel], APIError>> in
-				guard let self = self else { return .just(.success([]))}
-				self.currentOffset += self.itemsPerPage
-				self.isLoadingMoreData.accept(true)
-				return self.service.requestCharacters(offset: self.currentOffset,
-																							nameStartsWith: self.searchText.value,
-																							limit: self.itemsPerPage,
-																							ignoreDB: true)
-
-			}
-			.subscribe(onNext: { [weak self] result in
-				self?.isLoadingMoreData.accept(false)
-				switch result {
-					case .failure(let error):
-						self?.coordinator.showError(error: error)
-					case .success(let characters):
-						self?.endReached = characters.count < self?.itemsPerPage ?? 10
-						self?.filteredCharacters.append(contentsOf: characters)
-				}
-			})
-			.disposed(by: dissposeBag)
-		
-		
-		isLoadingMoreData
-			.subscribe(onNext: { [weak self] _ in
-				self?.createModels()
-			})
-			.disposed(by: dissposeBag)
+				
+				return Observable.concat([
+					Observable.just(.updateCurrentOffset(value: 0)),
+					
+					Observable.just(.setEndReached(false)),
+					
+					Observable.just(.setIsLoadingInitialData(true)),
+					
+					service.requestCharacters(offset: currentState.currentOffset, nameStartsWith: searchText, limit: itemsPerPage)
+						.map {.filteredCharacters($0) },
+					
+					Observable.just(.setIsLoadingInitialData(false)),
+					
+					Observable.just(.updateCellModels)
+				])
+		}
 	}
 	
+	func reduce(state: State, mutation: Mutation) -> State {
+		var newState = state
+		
+		switch mutation {
+			case .filteredCharacters(let result):
+				switch result {
+					case .failure(let error):
+						action.onNext(.showErrorNetwork(error: error))
+					case .success(let characters):
+						newState.filteredCharacters = characters
+				}
+			
+			case .moreFilteredCharacters(let result):
+				switch result {
+					case .failure(let error):
+						action.onNext(.showErrorNetwork(error: error))
+					case .success(let characters):
+						newState.currentOffset = state.currentOffset + itemsPerPage
+						newState.endReached = characters.count < itemsPerPage
+						newState.filteredCharacters.append(contentsOf: characters)
+				}
+				
+			case .setEndReached(let bool):
+				newState.endReached = bool
+				
+			case .setIsLoadingInitialData(let bool):
+				newState.isLoadingInitialData = bool
+			
+			case .setIsLoadingMoreData(let bool):
+				newState.isLoadingMoreData = bool
+			
+			case .updateCurrentOffset(let value):
+				newState.currentOffset = value
+				
+			case .updateCellModels:
+				newState.cellModels = createModels(state: state)
+		}
+		
+		return newState
+	}
 	
-	
-	private func createModels() {
+
+	private func createModels(state: State) -> [BaseCellModel] {
 		var cellModels = [BaseCellModel]()
 		
-		for character in filteredCharacters {
+		for character in currentState.filteredCharacters {
 			let characterCellModel = CharacterCellModel(with: character)
-			characterCellModel.onCellTapped = { [weak self] in
-				let transition = PushTransition(isAnimated: true)
-				self?.coordinator.route(to: .characterDetail(id: characterCellModel.id), from: nil, with: transition)
-			}
+			
+			characterCellModel.action
+				.map { _ in Action.routeToCharacter(character: character) }
+				.bind(to: action)
+				.disposed(by: dissposeBag)
 			
 			cellModels.append(characterCellModel)
 		}
 		
-		if isLoadingMoreData.value {
+		if currentState.isLoadingMoreData {
 			cellModels.append(LoadingTableViewCellModel())
 		}
 		
-		self.cellModels.onNext(cellModels)
+		return cellModels
 	}
 	
 }

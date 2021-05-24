@@ -5,18 +5,19 @@
 //  Created by Даниил on 22.04.2021.
 //
 
-import UIKit
+import RxSwift
 import Swinject
 
 final class CharacterCoordinator: Coordinator {
 	
 	enum Route {
 		case characterFeed
-		case characterDetail(id: Int)
+		case characterDetail(character: CharacterModel)
 	}
 	
 	private let parentNavigationController: UINavigationController
 	private let service: MarvelService
+	private let disposeBag = DisposeBag()
 	
 	var navigationController: UINavigationController = {
 		let nc = UINavigationController()
@@ -54,20 +55,33 @@ final class CharacterCoordinator: Coordinator {
 		switch route {
 			case .characterFeed:
 				routeToCharacterFeed(from: fromVC, with: transition)
-			case .characterDetail(let id):
-				routeToCharacterDetail(from: fromVC, to: id, with: transition)
+			case .characterDetail(let character):
+				routeToCharacterDetail(from: fromVC, to: character, with: transition)
 		}
 	}
 	
 	private func routeToCharacterFeed(from vc: UIViewController, with transition: Transition) {
-		let characterFeedViewModel = CharacterFeedViewModel(service: service, coordinator: self)
+		let characterFeedViewModel = CharacterFeedViewModel(service: service)
 		guard let characterFeedViewController = CharacterFeedViewController.createWithStoryboard(Storyboard.main, with: characterFeedViewModel) else { return }
+		
+		characterFeedViewModel.action.subscribe(onNext: { [weak self, characterFeedViewController] action in
+			
+			if case let .routeToCharacter(character) = action {
+				let transition = PushTransition(isAnimated: true)
+				self?.route(to: .characterDetail(character: character), from: characterFeedViewController, with: transition)
+			}
+			
+			if case let .showErrorNetwork(error) = action {
+				self?.showError(error: error)
+			}
+			
+		}).disposed(by: disposeBag)
 		
 		transition.open(characterFeedViewController, from: vc, completion: nil)
 	}
 	
-	private func routeToCharacterDetail(from vc: UIViewController, to characterId: Int,  with transition: Transition) {
-		let characterDetailViewModel = CharacterDetailViewModel(with: characterId, service: service, coordinator: self)
+	private func routeToCharacterDetail(from vc: UIViewController, to character: CharacterModel,  with transition: Transition) {
+		let characterDetailViewModel = CharacterDetailViewModel(with: character, service: service)
 		guard let characterDetailViewController = CharacterDetailViewController.createWithStoryboard(Storyboard.main, with: characterDetailViewModel) else { return }
 		
 		transition.open(characterDetailViewController, from: vc, completion: nil)

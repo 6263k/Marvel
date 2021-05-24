@@ -5,20 +5,18 @@
 //  Created by Даниил on 23.04.2021.
 //
 
-import RxSwift
+import ReactorKit
 
-class BaseViewController<ViewModel: BaseViewModel>: UIViewController {
-	enum Section: Hashable {}
-	
-	var viewModel: ViewModel!
+class BaseViewController<ViewModel: Reactor>: UIViewController, StoryboardView {
+	typealias Reactor = ViewModel
+	var disposeBag: DisposeBag = DisposeBag()
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		setupStyle()
-		setupRx()
 	}
 	
-	func setupRx() { }
+	func bind(reactor: ViewModel) {}
 	func setupStyle() { }
 	
 	class func createWithStoryboard(_ storyboard: UIStoryboard, with viewModel: ViewModel ) -> BaseViewController? {
@@ -27,7 +25,7 @@ class BaseViewController<ViewModel: BaseViewModel>: UIViewController {
 			return nil
 		}
 		
-		viewController.viewModel = viewModel
+		viewController.reactor = viewModel
 		return viewController
 	}
 	
@@ -37,7 +35,7 @@ class BaseViewController<ViewModel: BaseViewModel>: UIViewController {
 			return nil
 		}
 		
-		viewController.viewModel = viewModel
+		viewController.reactor = viewModel
 		return viewController
 	}
 }

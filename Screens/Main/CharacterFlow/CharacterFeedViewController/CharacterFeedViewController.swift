@@ -6,13 +6,14 @@
 //
 
 
-import RxSwift
+import ReactorKit
 import RxCocoa
 
 final class CharacterFeedViewController: BaseViewController<CharacterFeedViewModel>, LoadingViewable {
-	
+	typealias Reactor = CharacterFeedViewModel
+
 	@IBOutlet private weak var tableView: UITableView!
-	private let disposeBag = DisposeBag()
+	
 	private let searchController = UISearchController(searchResultsController: nil)
 	
 	override func setupStyle() {
@@ -31,40 +32,8 @@ final class CharacterFeedViewController: BaseViewController<CharacterFeedViewMod
 		tableView.estimatedRowHeight = 300
 	}
 	
-	override func setupRx() {
-		
+	override func bind(reactor: CharacterFeedViewModel) {
 		tableView.rx.setDelegate(self)
-			.disposed(by: disposeBag)
-		
-		viewModel.cellModels
-			.bind(to: tableView.rx.items) {tableView, index, cellModel in
-				let nib = UINib(nibName: cellModel.cellIdentifier, bundle: .main)
-				tableView.register(nib, forCellReuseIdentifier: cellModel.cellIdentifier)
-
-				guard let cell = tableView.dequeueReusableCell(withIdentifier: cellModel.cellIdentifier, for: IndexPath(index: index)) as? BaseTableViewCell else { fatalError() }
-
-				cell.configure(with: cellModel)
-				return cell
-			}
-			.disposed(by: disposeBag)
-		
-		searchController.searchBar.rx.text
-			.orEmpty
-			.bind(to: viewModel.searchText)
-			.disposed(by: disposeBag)
-		
-		viewModel.isLoadingInitialData
-			.throttle(.milliseconds(500), scheduler: MainScheduler.instance)
-			.bind(to: self.rx.isAnimating)
-			.disposed(by: disposeBag)
-		
-		
-		tableView.rx.contentOffset
-			.map { [weak self] offest -> Bool in
-				self?.tableView.isNearBottomEdge(edgeOffset: 20.0) ?? false
-			}
-			.filter { $0 }
-			.bind(to: viewModel.shouldLoadMoreData)
 			.disposed(by: disposeBag)
 		
 		tableView.rx.keyboardHeight
@@ -78,9 +47,42 @@ final class CharacterFeedViewController: BaseViewController<CharacterFeedViewMod
 			})
 			.disposed(by: disposeBag)
 		
+		//State
+		reactor.state.map { $0.cellModels }
+			.bind(to: tableView.rx.items) {tableView, index, cellModel in
+				let nib = UINib(nibName: cellModel.cellIdentifier, bundle: .main)
+				tableView.register(nib, forCellReuseIdentifier: cellModel.cellIdentifier)
+				
+				guard let cell = tableView.dequeueReusableCell(withIdentifier: cellModel.cellIdentifier, for: IndexPath(index: index)) as? BaseTableViewCell else { fatalError() }
+				
+				cell.configure(with: cellModel)
+				return cell
+			}
+			.disposed(by: disposeBag)
+		
+		
+		reactor.state.map { $0.isLoadingInitialData }
+			.throttle(.milliseconds(500), scheduler: MainScheduler.instance)
+			.bind(to: self.rx.isAnimating)
+			.disposed(by: disposeBag)
+		
+		
+		//Actions
+		tableView.rx.isNearBottomEdge(edgeOffset: 20.0)
+			.filter { $0 }
+			.map { _ in Reactor.Action.isMoreDataNeeded }
+			.bind(to: reactor.action)
+			.disposed(by: disposeBag)
+		
+		searchController.searchBar.rx.text
+			.orEmpty
+			.throttle(.milliseconds(500), scheduler: MainScheduler.instance)
+			.distinctUntilChanged()
+			.map { text in Reactor.Action.searchTextChanged(searchText: text)}
+			.bind(to: reactor.action)
+			.disposed(by: disposeBag)
+		
 	}
-	
-	
 	
 }
 
